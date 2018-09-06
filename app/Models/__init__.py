@@ -1,5 +1,5 @@
 from app import db, login_manager
-from app.Models import User
+from app.Models.User import User
 
 
 @login_manager.user_loader

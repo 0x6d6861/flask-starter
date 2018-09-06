@@ -5,12 +5,13 @@ from flask import render_template, redirect, url_for, flash
 from flask_login import login_required, logout_user, login_user
 
 
-from app.Models import User
+from app.Models.User import User as UserModel
 from app.Modules.User.forms import LoginForm, RegistrationForm
 
 
 @user.route('/')
 def index():
+    print(UserModel.query.filter_by(email='agape@live.fr').first())
     return "Hello Users"
 
 
@@ -21,7 +22,7 @@ def login():
 
         # check whether employee exists in the database and whether
         # the password entered matches the password in the database
-        user = User.query.filter_by(email=form.email.data).first()
+        user = UserModel.query.filter_by(email=form.email.data).first()
         if user is not None and user.verify_password(
                 form.password.data):
             # log employee in
@@ -32,7 +33,7 @@ def login():
 
         # when login details are incorrect
         else:
-            flash('Invalid email or password.')
+            flash('Invalid email or password.', 'error')
 
     # load login template
     return render_template('auth/login.html', form=form, title='Login')
@@ -46,7 +47,7 @@ def register():
     """
     form = RegistrationForm()
     if form.validate_on_submit():
-        user_new = User(email=form.email.data,
+        user_new = UserModel(email=form.email.data,
                         name=form.username.data,
                         password=form.password.data)
 
