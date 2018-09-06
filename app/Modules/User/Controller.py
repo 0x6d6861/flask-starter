@@ -1,7 +1,7 @@
 from app import db
 from . import user
 
-from flask import render_template, redirect, url_for, flash
+from flask import render_template, redirect, url_for, flash, request
 from flask_login import login_required, logout_user, login_user
 
 
@@ -18,22 +18,24 @@ def index():
 @user.route('/login', methods=['GET', 'POST'])
 def login():
     form = LoginForm()
-    if form.validate_on_submit():
+    if request.method == 'POST':
+        if form.validate_on_submit():
 
-        # check whether employee exists in the database and whether
-        # the password entered matches the password in the database
-        user = UserModel.query.filter_by(email=form.email.data).first()
-        if user is not None and user.verify_password(
-                form.password.data):
-            # log employee in
-            login_user(user)
+            # check whether employee exists in the database and whether
+            # the password entered matches the password in the database
+            user = UserModel.query.filter_by(email=form.email.data).first()
+            if user is not None and user.verify_password(
+                    form.password.data):
+                # log employee in
+                login_user(user)
 
-            # redirect to the dashboard page after login
-            return redirect(url_for('home.dashboard'))
+                # redirect to the dashboard page after login
+                return redirect(url_for('home.dashboard'))
 
-        # when login details are incorrect
-        else:
-            flash('Invalid email or password.', 'error')
+            # when login details are incorrect
+            else:
+                print("Login failed")
+                flash('Invalid email or password.', 'error')
 
     # load login template
     return render_template('auth/login.html', form=form, title='Login')
