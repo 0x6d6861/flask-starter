@@ -10,10 +10,12 @@ login_manager = LoginManager()
 
 
 
+
 # local imports
 from config import app_config
 
 from .Modules.User import user as userModule
+from .Modules.Trip import trip as tripModule
 
 
 
@@ -26,7 +28,7 @@ def create_app(config_name):
     # db.create_all()
     login_manager.init_app(app)
     login_manager.login_message = "You must be logged in to access this page."
-    login_manager.login_view = "auth.login"
+    login_manager.login_view = "users.login"
 
     migrate = Migrate(app, db)
 
@@ -36,5 +38,6 @@ def create_app(config_name):
 
     # MODULES
     app.register_blueprint(userModule, url_prefix='/users')
+    app.register_blueprint(tripModule, url_prefix='/trips')
 
     return app

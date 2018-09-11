@@ -1,0 +1,295 @@
+{% extends "main/base.html" %}
+{% block main %}
+
+    <form method="POST" action="{{ url_for('trips.add') }}">
+
+		<div id="triprecalculation" class="row h-100">
+			<div class="col-sm-4">
+                {% with messages = get_flashed_messages() %}
+                  {% if messages %}
+                    {%- for message in messages %}
+                        <div class="alert alert-success alert-dismissible fade show" role="alert">
+                          {{ message }}
+                          <button type="button" class="close" data-dismiss="alert" aria-label="Close">
+                            <span aria-hidden="true">&times;</span>
+                          </button>
+                        </div>
+                    {% endfor -%}
+                  {% endif %}
+                {% endwith %}
+				<div class="w-100  mt-3">
+                    <div class="form-group">
+						<input type="text" name="tripID" class="form-control form-control-sm" id="tripID" placeholder="TripID">
+					</div>
+
+					<div class="form-group">
+						<input type="text" name="origin" class="form-control form-control-sm" id="origin" placeholder="Origin">
+					</div>
+					<div class="form-group">
+						<div class="row">
+							<div class="col">
+								<input type="text" class="form-control form-control-sm waypoint" name="waypoint[]" placeholder="Waypoint">
+							</div>
+							<div class="col-auto">
+								<button type="button" class="btn btn-sm remove_way">
+                                    <i class="material-icons">remove</i>
+                                </button>
+								<button type="button" class="btn btn-sm add_way">
+                                    <i class="material-icons">add</i>
+                                </button>
+							</div>
+						</div>
+					</div>
+					<div class="form-group">
+						<input type="text" name="destination" class="form-control form-control-sm" id="destination" placeholder="Destination">
+					</div>
+					<div class="form-group">
+						<button id="plot_direction" type="button" class="btn btn-secondary btn-sm">Plot Direction</button>
+					</div>
+					<hr>
+					<div class="form-group">
+						<div class="row">
+							<div class="col-6">
+								<label for="distance">Distance</label>
+								<input type="text" name="distance" value="1" class="form-control changeAction" id="distance" placeholder="Distance">
+							</div>
+							<div class="col-6">
+								<label for="time">Time</label>
+								<input type="text" name="time" value="1" class="form-control changeAction" id="time" placeholder="Time">
+							</div>
+						</div>
+					</div>
+					<div class="form-group">
+						<div class="form-check form-check-inline">
+							<input class="form-check-input" type="radio" name="ttype" id="corp" value="corp" checked="checked">
+							<label class="form-check-label" for="corp">Corporate</label>
+						</div>
+						<div class="form-check form-check-inline">
+							<input class="form-check-input" type="radio" name="ttype" id="indv" value="indv">
+							<label class="form-check-label" for="indv">Individual</label>
+						</div>
+					</div>
+					<div class="form-group">
+						<select class="custom-select changeAction" name="vtype" id="vtype">
+							<option value="b">Basic</option>
+							<option value="c">Confort</option>
+							<option value="cp">Comfort Plus</option>
+							<option value="g">Goods</option>
+							<option value="boda">Boda Boda</option>
+						</select>
+					</div>
+					<hr>
+					<div class="form-group">
+						<label for="distance">Trip Cost</label>
+						<input type="text" name="cost" class="form-control" id="cost" placeholder="Trip Cost">
+					</div>
+
+                    <div class="form-group">
+						<button type="submit" class="btn btn-primary">Report Issue</button>
+					</div>
+
+
+				</div>
+			</div>
+			<div class="col-sm-8">
+				<div id="map" class="h-100 w-100"></div>
+			</div>
+		</div>
+
+</form>
+
+{% endblock %}
+
+{% block script %}
+<script src="https://maps.googleapis.com/maps/api/js?key=AIzaSyDbmUlBnah_zfndo-p66h_hG9rvN-navHg&libraries=places"></script>
+<script>
+
+// TODO: consider deferent base fare for each vtype
+/*var option = {
+  vtype: "b",
+  ttype: "corp",
+  time: 50,
+  distance: 20,
+  base: 100
+};*/
+
+$(".changeAction").on("change paste keyup", function() {
+  //evt,preventDefault();
+  recalculateEvent();
+});
+
+$("input[name='ttype']").on("change paste keyup", function() {
+  //evt,preventDefault();
+  recalculateEvent();
+});
+
+function recalculateEvent() {
+  var option = {
+    vtype: $("#vtype").val(),
+    ttype: $("input[name='ttype']:checked").val(),
+    time: $("#time").val(),
+    distance: $("#distance").val(),
+    base: 100
+  };
+  $("#cost").val(recalculateFare(option));
+  return true;
+}
+
+function recalculateFare(option) {
+  var options = {
+    indv: {
+      b: 35,
+      c: 40,
+      cp: 50,
+      g: 60,
+      boda: 20,
+      _min: 250
+    },
+    corp: {
+      b: 40,
+      c: 45,
+      cp: 50,
+      g: 60,
+      boda: 20,
+      _min: 270
+    }
+  };
+
+  var raw_fare =
+    options[option.ttype][option.vtype] * option.distance +
+    4 * option.time +
+    option.base;
+
+  if (raw_fare <= options[option.ttype]._min) {
+    raw_fare = options[option.ttype]._min;
+  }
+
+  return Math.ceil(raw_fare / 10) * 10;
+}
+
+// MAPS RELATED
+
+var map;
+var directionsService = new google.maps.DirectionsService();
+var directionsDisplay = new google.maps.DirectionsRenderer();
+
+var origin = document.getElementById("origin");
+var destination = document.getElementById("destination");
+var originAutocomplete = new google.maps.places.Autocomplete(origin, {
+  placeIdOnly: true,
+  componentRestrictions: { country: "ke" }
+});
+var destinationAutocomplete = new google.maps.places.Autocomplete(destination, {
+  placeIdOnly: true,
+  componentRestrictions: { country: "ke" }
+});
+
+map = new google.maps.Map(document.getElementById("map"), {
+  center: { lat: -1.2649154, lng: 36.7659741 },
+  zoom: 15
+});
+directionsDisplay.setMap(map);
+
+$("#plot_direction").on("click", async function() {
+  var stats_new = await calculateAndDisplayRoute(
+    directionsService,
+    directionsDisplay
+  );
+
+  console.log(stats_new.time);
+  //$('#time').val(stats_new.time);
+  //$('#distance').val(stats_new.distance);
+});
+
+waypointsAutocomplete();
+
+$("#triprecalculation").on("click", ".add_way", function() {
+  var waypoint_html = `<div class="form-group">
+			<div class="row">
+				<div class="col">
+					<input type="text" class="form-control form-control-sm waypoint" name="waypoint[]" placeholder="Waypoint">
+				</div>
+				<div class="col-auto">
+					<button type="button" class="btn btn-sm remove_way">
+                        <i class="material-icons">remove</i>
+                    </button>
+                    <button type="button" class="btn btn-sm add_way">
+                        <i class="material-icons">add</i>
+                    </button>
+				</div>
+			</div>
+		</div>`;
+
+  $(this)
+    .closest(".form-group")
+    .after($.parseHTML(waypoint_html));
+  waypointsAutocomplete();
+});
+
+$("#triprecalculation").on("click", ".remove_way", function() {
+  $(this)
+    .closest(".form-group")
+    .remove();
+  waypointsAutocomplete();
+});
+
+function waypointsAutocomplete() {
+  var waypoints = document.getElementsByClassName("waypoint");
+  for (var i = 0; i < waypoints.length; i++) {
+    new google.maps.places.Autocomplete(waypoints[i], {
+      placeIdOnly: true,
+      componentRestrictions: { country: "ke" }
+    });
+  }
+}
+function calculateAndDisplayRoute(directionsService, directionsDisplay) {
+  var waypts = [];
+  var waypoints = document.getElementsByClassName("waypoint");
+  var distance = 0;
+  var time = 0;
+
+  for (var i = 0; i < waypoints.length; i++) {
+    if (waypoints[i].value){
+      waypts.push({
+        location: waypoints[i].value,
+        stopover: true
+      });
+    }
+  }
+  directionsService.route(
+    {
+      origin: document.getElementById("origin").value,
+      destination: document.getElementById("destination").value,
+      waypoints: waypts,
+      optimizeWaypoints: true,
+      travelMode: "DRIVING"
+    },
+    function(response, status) {
+      if (status === "OK") {
+        directionsDisplay.setDirections(response);
+
+        var legs = response.routes[0].legs;
+        legs.forEach(function(leg) {
+          distance += leg.distance.value;
+          time += leg.duration.value;
+        });
+
+        //BAD CODE
+        $("#time").val(time / 60);
+        $("#distance").val(distance / 1000);
+        recalculateEvent();
+        //BAD CODE
+      } else {
+        window.alert("Directions request failed due to " + status);
+      }
+    }
+  );
+  return {
+    distance: distance / 1000,
+    time: time / 60
+  };
+}
+
+
+</script>
+{% endblock %}

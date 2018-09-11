@@ -1,0 +1,54 @@
+{% extends "main/base.html" %}
+{% block main %}
+    <div class="mt-5">
+    <div class="float-left">
+        <a class="btn btn-primary" href="{{ url_for('trips.add') }}"><i class="material-icons mr-1">add</i> New Issue</a>
+    </div>
+        <div class="float-right">
+            <a class="btn btn-info" href="{{ url_for('trips.export') }}">Export Data <i class="material-icons ml-1">save_alt</i></a>
+        </div>
+    <span class="clearfix"></span>
+    </div>
+
+
+    <div class="card card-default mt-5">
+            <table class="table">
+      <thead>
+        <tr>
+          <th scope="col">TripID</th>
+          <th scope="col">From</th>
+          <th scope="col">To</th>
+          <th scope="col">Trip</th>
+            <th scope="col">Total</th>
+            <th scope="col">Action</th>
+        </tr>
+      </thead>
+      <tbody>
+      {% for trip in user.trips %}
+        <tr>
+          <th scope="row">{{ trip.tripid }} <br>
+          <small>Logged by {{ trip.user.name }}</small>
+          </th>
+          <td>
+              {{ trip.from_ }}
+          </td>
+          <td>{{ trip.to_ }}</td>
+          <td>
+              Category: <span class="badge badge-secondary">{{ trip.trip_type }}</span> <br>
+              Vehicle: <span class="badge badge-secondary">{{ trip.vehicle_type }}</span> <br>
+              Distance: <span class="badge badge-secondary">{{ trip.distance }}Km</span> <br>
+              Time: <span class="badge badge-secondary">{{ trip.time }}min</span>
+          </td>
+            <td>
+                KSH {{ trip.total }}
+            </td>
+            <td>
+                <button class="btn btn-danger">Delete</button>
+            </td>
+        </tr>
+      {% endfor %}
+      </tbody>
+    </table>
+    </div>
+
+{% endblock %}
